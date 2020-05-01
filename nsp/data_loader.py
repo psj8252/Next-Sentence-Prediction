@@ -10,11 +10,11 @@ class Vocab(vocab.Vocab):
     Vocab object to map word to index.
     """
 
-    def __init__(self, specials=["<PAD>", "<SOS>", "<EOS>", "<SEP>", "<CTXSEP>", "<CTXEND>"]):
+    def __init__(self, specials=["<SOS>", "<EOS>", "<SEP>", "<CTXSEP>", "<CTXEND>"]):
         """
         :param specials: (iterable) Special tokens that considered as words.
         """
-        super().__init__({x: 1 for x in ("<UNK>", *specials)}, specials=specials)
+        super().__init__({x: 1 for x in ("<PAD>", "<UNK>", *specials)}, specials=specials)
 
     def save(self, path):
         """
@@ -47,14 +47,13 @@ class Vocab(vocab.Vocab):
 
 
 class Fields:
-    def __init__(self, vocab_path=None, tokenize=None, preprocessing=None, pad_token="<PAD>", **kwargs):
+    def __init__(self, vocab_path=None, tokenize=None, preprocessing=None, **kwargs):
         """
         object containing torchtext utterance and label fields.
         :param vocab_path: (str) vocab file path to create Vocab.
         :param tokenize: (func) function to tokenize utterances (str) -> (list) of tokens format.
                          default tokenizer is Mecab and str.split (if mecab is unavailable)
         :param preprocessing: (func) torchtext preprocessing function.
-        :param pad_token: (str) pad token for padding utterance.
         :param kwargs: (dict) keyword arguments for utterance field.
         """
         # Set tokenize
@@ -70,7 +69,9 @@ class Fields:
                 print("Tokenize with 'str.split'", file=sys.stderr)
 
         # Set fields
-        self.utterance_field = Field(tokenize=tokenize, preprocessing=preprocessing, pad_token=pad_token, **kwargs)
+        self.utterance_field = Field(
+            tokenize=tokenize, preprocessing=preprocessing, pad_token="<PAD>", unk_token="<UNK>", **kwargs
+        )
         self.label_field = Field(sequential=False, use_vocab=False)
 
         # Set vocab to utterance field

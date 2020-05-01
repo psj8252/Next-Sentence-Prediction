@@ -10,11 +10,14 @@ class Vocab(vocab.Vocab):
     Vocab object to map word to index.
     """
 
+    UNK = "<UNK>"
+
     def __init__(self, specials=["<SOS>", "<EOS>", "<SEP>", "<CTXSEP>", "<CTXEND>"]):
         """
         :param specials: (iterable) Special tokens that considered as words.
         """
         super().__init__({x: 1 for x in ("<PAD>", "<UNK>", *specials)}, specials=specials)
+        self.unk_index = self["<UNK>"]
 
     def save(self, path):
         """

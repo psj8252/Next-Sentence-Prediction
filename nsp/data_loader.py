@@ -92,6 +92,7 @@ class DataLoader:
         """
         Make datasets from train_data_path, test_data_path.
         :param fields: (list, Fields) This is used for TabularDataset fields. If the type of fields is list, it's format should be TarbularDataset fields.
+                        [defulat file form] type tsv, contains header row, column format ('id', 'utterance', 'label')
         :param train_data_path: (str) training data file path.
         :param test_data_path: (str) testing data file path.
         :param format: (str) TabularDataset processing file format. (default: tsv)
@@ -102,7 +103,7 @@ class DataLoader:
         if not fields:
             fields = Fields()
         if isinstance(fields, Fields):
-            fields = [("utterance", fields.utterance_field), ("label", fields.label_field)]
+            fields = [("id", None), ("utterance", fields.utterance_field), ("label", fields.label_field)]
         else:
             assert "utterance" in (field_name for field_name, _ in fields)
 

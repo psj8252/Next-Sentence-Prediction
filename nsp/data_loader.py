@@ -10,11 +10,11 @@ class Vocab(vocab.Vocab):
     Vocab object to map word to index.
     """
 
-    def __init__(self, specials=["<pad>", "<sos>", "<eos>", "<sep>"]):
+    def __init__(self, specials=["<PAD>", "<SOS>", "<EOS>", "<SEP>", "<CTXSEP>", "<CTXEND>"]):
         """
         :param specials: (iterable) Special tokens that considered as words.
         """
-        super().__init__({x: 1 for x in ("<unk>", *specials)}, specials=specials)
+        super().__init__({x: 1 for x in ("<UNK>", *specials)}, specials=specials)
 
     def save(self, path):
         """
@@ -47,7 +47,7 @@ class Vocab(vocab.Vocab):
 
 
 class Fields:
-    def __init__(self, vocab_path=None, tokenize=None, preprocessing=None, pad_token="<pad>", **kwargs):
+    def __init__(self, vocab_path=None, tokenize=None, preprocessing=None, pad_token="<PAD>", **kwargs):
         """
         object containing torchtext utterance and label fields.
         :param vocab_path: (str) vocab file path to create Vocab.

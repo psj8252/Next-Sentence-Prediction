@@ -31,6 +31,10 @@ class BaseManager:
 
 class TrainManager(BaseManager):
     def __init__(self, training_config_path, device):
+        """
+        :param training_config_path: (str) training config file path.
+        :param device: (str, torch.device) device for training.
+        """
         # Set loogger
         self._set_logger(f"{datetime.now().strftime('%Y-%m-%d_%H:%M:%S')}_train.log")
         self.logger.info("Setting logger is complete")
@@ -54,6 +58,9 @@ class TrainManager(BaseManager):
         self.logger.info(f"Prepared model type: {type(self.model)}")
 
     def train(self):
+        """
+        Start training.
+        """
         self.logger.info("------------- Training Start -------------")
 
         # Set optimizer
@@ -134,6 +141,9 @@ class TrainManager(BaseManager):
             self.model.save(f"{self.config.model_save_prefix}_{epoch}epoch_f1-{f1}.pth")
 
     def _evaluate(self):
+        """
+        Evaluate current model using test dataset.
+        """
         self.model.eval()
 
         batches = Iterator(
@@ -164,6 +174,11 @@ class TrainManager(BaseManager):
         return loss_sum / len(self.test_dataset), accuracy, precision, recall, f1
 
     def get_metrics(self, true_labels, pred_labels):
+        """
+        :param true_labels: (iterable) correct label.
+        :param pred_labels: (iterable) predicted label by model.
+        :return: (accuracy, precision, recall, f1) (tuple of float)
+        """
         accuracy = accuracy_score(true_labels, pred_labels)
         precision, recall, f1, _ = precision_recall_fscore_support(
             true_labels, pred_labels, average="binary", zero_division=0
@@ -173,6 +188,11 @@ class TrainManager(BaseManager):
 
 class InferManager(BaseManager):
     def __init__(self, inference_config_path, tokenize=None, device="cpu"):
+        """
+        :param inference_config_path: (str) inference config file path.
+        :param tokenize: (func) tokenizing function. (str) -> (list) of (str) tokens.
+        :prarm device: (str, torch.device) device for inference.
+        """
         # Set loogger
         self._set_logger(f"{datetime.now().strftime('%Y-%m-%d_%H:%M:%S')}_infer.log")
         self.logger.info("Setting logger is complete")
@@ -199,7 +219,10 @@ class InferManager(BaseManager):
         self.logger.info(f"Set fields tokenize with '{self.fields.utterance_field.tokenize}'")
 
     def inference_texts(self, texts):
-
+        """
+        :param texts: (list) list of texts to inferece.
+        :return: (list) of (int) labels about each text.
+        """
         # Make inference batches
         dataset = self._list_to_dataset(texts, self.fields.utterance_field)
         batches = Iterator(
@@ -219,6 +242,8 @@ class InferManager(BaseManager):
     def _list_to_dataset(self, texts, utterance_field):
         """
         Make dataset from list of texts.
+        :param texts: (list) list of texts to inferece.
+        :param utterance_field: (Field) fields having tokenize function and vocab.
         """
         # Tokenize texts
         tokenized = [[utterance_field.tokenize(text)] for text in texts]

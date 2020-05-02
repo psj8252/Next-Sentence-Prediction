@@ -5,11 +5,11 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from sklearn.metrics import accuracy_score, precision_recall_fscore_support
-from torchtext.data import Iterator
+from torchtext.data import Dataset, Example, Iterator
 
 from . import models
 from .config import InferConfig, TrainConfig
-from .data_loader import DataLoader, Vocab
+from .data_loader import DataLoader, Fields, Vocab
 
 
 class BaseManager:
@@ -169,3 +169,63 @@ class TrainManager(BaseManager):
             true_labels, pred_labels, average="binary", zero_division=0
         )
         return accuracy, precision, recall, f1
+
+
+class InferManager(BaseManager):
+    def __init__(self, inference_config_path, tokenize=None, device="cpu"):
+        # Set loogger
+        self._set_logger(f"{datetime.now().strftime('%Y-%m-%d_%H:%M:%S')}_infer.log")
+        self.logger.info("Setting logger is complete")
+
+        # Set device
+        self.device = torch.device(device)
+        self.logger.info(f"Setting device:{self.device} is complete")
+
+        # Load training Config
+        self.config = InferConfig.load_from_json(inference_config_path)
+        self.logger.info(f"Loaded inference config from '{inference_config_path}'")
+
+        # Load Model
+        self.model = getattr(models, self.config.model_type).load(self.config.model_path)
+        self.model.to(self.device)
+        self.logger.info(f"Prepared model type: {type(self.model)}")
+
+        # Load vocab
+        self.vocab = Vocab.load(self.config.vocab_path)
+        self.logger.info(f"Set vocab from '{self.config.vocab_path}'")
+
+        # Set fields
+        self.fields = Fields(vocab_path=self.config.vocab_path, tokenize=tokenize)
+        self.logger.info(f"Set fields tokenize with '{self.fields.utterance_field.tokenize}'")
+
+    def inference_texts(self, texts):
+
+        # Make inference batches
+        dataset = self._list_to_dataset(texts, self.fields.utterance_field)
+        batches = Iterator(
+            dataset, batch_size=self.config.val_batch_size, device=self.device, train=False, shuffle=False, sort=False
+        )
+
+        # Predict
+        labels = []
+        total_step = int(len(dataset) / self.config.val_batch_size + 1)
+        for batch in batches:
+            output = self.model(batch.utterance)
+            label = output.argmax(dim=1).cpu().detach().numpy()
+            labels.extend(label)
+
+        return labels
+
+    def _list_to_dataset(self, texts, utterance_field):
+        """
+        Make dataset from list of texts.
+        """
+        # Tokenize texts
+        tokenized = [[utterance_field.tokenize(text)] for text in texts]
+
+        # Make dataset from list
+        fields = [("utterance", utterance_field)]
+        examples = [Example.fromlist(text, fields=fields) for text in tokenized]
+        dataset = Dataset(examples, fields=fields)
+
+        return dataset

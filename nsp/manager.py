@@ -8,22 +8,31 @@ from sklearn.metrics import accuracy_score, precision_recall_fscore_support
 from torchtext.data import Iterator
 
 from . import models
-from .config import TrainConfig
-from .data_loader import DataLoader
+from .config import InferConfig, TrainConfig
+from .data_loader import DataLoader, Vocab
 
 
-class TrainManager:
-    def __init__(self, training_config_path, device):
-        # Set loogger
+class BaseManager:
+    def _set_logger(self, file_name):
+        """
+        Set logger that logging to std.out and file named 'file_name'.
+        :param file_name: File path to save log.
+        """
         self.logger = logging.getLogger(__file__)
         self.logger.setLevel(logging.DEBUG)
         formatter = logging.Formatter("[%(asctime)s] %(message)s")
         handler = logging.StreamHandler()
         handler.setFormatter(formatter)
-        file_handler = logging.FileHandler(f"{datetime.now().strftime('%Y-%m-%d_%H:%M:%S')}_train.log")
+        file_handler = logging.FileHandler(file_name)
         file_handler.setFormatter(formatter)
         self.logger.addHandler(handler)
         self.logger.addHandler(file_handler)
+
+
+class TrainManager(BaseManager):
+    def __init__(self, training_config_path, device):
+        # Set loogger
+        self._set_logger(f"{datetime.now().strftime('%Y-%m-%d_%H:%M:%S')}_train.log")
         self.logger.info("Setting logger is complete")
 
         # Set device
@@ -160,7 +169,3 @@ class TrainManager:
             true_labels, pred_labels, average="binary", zero_division=0
         )
         return accuracy, precision, recall, f1
-
-
-class InferManager:
-    pass

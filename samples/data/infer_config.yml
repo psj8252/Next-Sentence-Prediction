@@ -1,0 +1,4 @@
+model_type: TransformerModel
+model_path: saved_model.pth
+vocab_path: vocab_nsp_sample.txt
+val_batch_size: 128

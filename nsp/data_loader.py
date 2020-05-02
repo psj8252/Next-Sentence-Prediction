@@ -16,8 +16,14 @@ class Vocab(vocab.Vocab):
         """
         :param specials: (iterable) Special tokens that considered as words.
         """
-        super().__init__({x: 1 for x in ("<PAD>", "<UNK>", *specials)}, specials=specials)
+        super().__init__({}, specials=())
+
+        class special_tokens:
+            itos = ["<PAD>", "<UNK>", *specials]
+
+        self.extend(special_tokens)
         self.unk_index = self["<UNK>"]
+        self.stoi.default_factory = lambda: self.unk_index
 
     def save(self, path):
         """

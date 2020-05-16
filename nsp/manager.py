@@ -149,7 +149,7 @@ class TrainManager(BaseManager):
             self.test_dataset,
             batch_size=self.config.val_batch_size,
             device=self.device,
-            sort_key=lambda x: len(x.utterance),
+            sort_key=lambda x: len(x.query),
             train=False,
         )
 

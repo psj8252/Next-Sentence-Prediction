@@ -71,9 +71,8 @@ class TrainManager(BaseManager):
         for epoch in range(1, self.config.epoch + 1):
 
             # Shape
-            # batch.utterance: (Sequence x BatchSize)
+            # batch.context, batch.query, batch.reply: (Sequence x BatchSize)
             # batch.label: (BatchSize)
-            criterion = nn.CrossEntropyLoss()
             batches = Iterator(self.train_dataset, batch_size=self.config.batch_size, device=self.device, train=True)
 
             # Training
@@ -87,9 +86,9 @@ class TrainManager(BaseManager):
 
                 # Shape
                 # output: (BatchSize)
-                output = self.model(batch.utterance)
+                output = self.model(batch.context, batch.query, batch.reply)
 
-                loss = criterion(output, batch.label)
+                loss = self.model.criterion(output, batch.label)
                 loss.backward()
                 optimizer.step()
 
@@ -153,16 +152,15 @@ class TrainManager(BaseManager):
             sort_key=lambda x: len(x.utterance),
             train=False,
         )
-        criterion = nn.CrossEntropyLoss()
 
         loss_sum = 0.0
         true_labels = []
         pred_labels = []
         for batch in batches:
-            output = self.model(batch.utterance)
+            output = self.model(batch.context, batch.query, batch.reply)
 
             # Calculate loss
-            loss = criterion(output, batch.label)
+            loss = self.model.criterion(output, batch.label)
             loss_sum += loss.item() * len(batch)
 
             # Calculate metrics
@@ -233,7 +231,7 @@ class InferManager(BaseManager):
         labels = []
         total_step = int(len(dataset) / self.config.val_batch_size + 1)
         for batch in batches:
-            output = self.model(batch.utterance)
+            output = self.model(batch.context, batch.query, batch.reply)
             label = output.argmax(dim=1).cpu().detach().numpy()
             labels.extend(label)
 

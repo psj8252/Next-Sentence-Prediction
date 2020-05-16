@@ -113,9 +113,17 @@ class DataLoader:
         if not fields:
             fields = Fields()
         if isinstance(fields, Fields):
-            fields = [("id", None), ("utterance", fields.utterance_field), ("label", fields.label_field)]
+            fields = [
+                ("id", None),
+                ("context", fields.utterance_field),
+                ("query", fields.utterance_field),
+                ("reply", fields.utterance_field),
+                ("label", fields.label_field),
+            ]
         else:
-            assert "utterance" in (field_name for field_name, _ in fields)
+            assert "context" in (field_name for field_name, _ in fields)
+            assert "query" in (field_name for field_name, _ in fields)
+            assert "reply" in (field_name for field_name, _ in fields)
 
         # Make train dataset
         if train_data_path:
@@ -141,7 +149,7 @@ class DataLoader:
             dataset = self.train_dataset
 
         # Build vocab using "utterance" fields
-        utterance_field = self.train_dataset.fields["utterance"]
+        utterance_field = self.train_dataset.fields["query"]
         utterance_field.build_vocab(dataset, min_freq=min_freq)
 
         # Convert to "Vocab" type
@@ -197,8 +205,13 @@ class DataLoader:
         from copy import copy
 
         fields = {k: copy(v) for k, v in dataset.fields.items()}
-        fields["utterance"].tokenize = None
-        fields["utterance"].tokenizer_args = (None, "ko")
-        fields["utterance"].preprocessing = None
-        fields["utterance"].postprocessing = None
+
+        for name, field in fields.items():
+            if name not in ("context", "query", "reply"):
+                continue
+
+            field.tokenize = None
+            field.tokenizer_args = (None, "ko")
+            field.preprocessing = None
+            field.postprocessing = None
         return fields

@@ -12,7 +12,7 @@ class Vocab(vocab.Vocab):
 
     UNK = "<UNK>"
 
-    def __init__(self, specials=["<SOS>", "<EOS>", "<SEP>", "<CTXSEP>", "<CTXEND>"]):
+    def __init__(self, specials=["<CSOS>", "<QSOS>", "<RSOS>", "<CSEP>", "<EOS>"]):
         """
         :param specials: (iterable) Special tokens that considered as words.
         """
@@ -130,7 +130,7 @@ class DataLoader:
 
         return self.train_dataset, self.test_dataset
 
-    def build_vocab(self, dataset=None, specials=None):
+    def build_vocab(self, dataset=None, specials=None, min_freq=50):
         """
         Build Vocab from Train dataset.
         :param dataset: (Dataset) dataset used to build vocab. (default: self.train_dataset)
@@ -142,7 +142,7 @@ class DataLoader:
 
         # Build vocab using "utterance" fields
         utterance_field = self.train_dataset.fields["utterance"]
-        utterance_field.build_vocab(dataset)
+        utterance_field.build_vocab(dataset, min_freq=min_freq)
 
         # Convert to "Vocab" type
         vocab = Vocab(specials) if specials else Vocab()

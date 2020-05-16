@@ -50,7 +50,7 @@ class TransformerModel(BaseModel):
         self.context_query_mean_ffn = nn.Linear(d_model, embedding_dim)
         self.cos = nn.CosineSimilarity(dim=1)
 
-        self.criterion = F.binary_cross_entropy
+        self.criterion = lambda outputs, labels: F.binary_cross_entropy(outputs, labels.float())
 
         # Set parameters for save
         self.save_params = {

@@ -94,7 +94,7 @@ class TrainManager(BaseManager):
 
                 loss_sum += loss.item()
 
-                pred_labels.extend(output.argmax(dim=1).cpu().detach().numpy())
+                pred_labels.extend(self.model.to_labels(output))
                 true_labels.extend(batch.label.cpu().numpy())
 
                 # logging step
@@ -165,7 +165,7 @@ class TrainManager(BaseManager):
 
             # Calculate metrics
             true_labels.extend(batch.label.cpu().numpy())
-            pred_labels.extend(output.argmax(dim=1).cpu().detach().numpy())
+            pred_labels.extend(self.model.to_labels(output))
 
         accuracy, precision, recall, f1 = self.get_metrics(true_labels, pred_labels)
 
@@ -232,7 +232,7 @@ class InferManager(BaseManager):
         total_step = int(len(dataset) / self.config.val_batch_size + 1)
         for batch in batches:
             output = self.model(batch.context, batch.query, batch.reply)
-            label = output.argmax(dim=1).cpu().detach().numpy()
+            label = self.model.to_labels(output)
             labels.extend(label)
 
         return labels

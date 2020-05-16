@@ -91,4 +91,11 @@ class TransformerModel(BaseModel):
         context_query = self.context_query_mean_ffn((context + query) / 2)
 
         output = self.cos(context_query, reply)
+        output[output < 0] = 0.0
         return output
+
+    def to_labels(self, output):
+        """
+        Return to labels (ex [1, 0, 1, 1, 0, ...]) from model output
+        """
+        return (output > 0.5).cpu().detach().numpy()

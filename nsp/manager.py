@@ -5,6 +5,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from sklearn.metrics import accuracy_score, precision_recall_fscore_support
+from torch.optim.lr_scheduler import CosineAnnealingLR
 from torchtext.data import Dataset, Example, Iterator
 
 from . import models
@@ -67,6 +68,11 @@ class TrainManager(BaseManager):
         optimizer = getattr(optim, self.config.optimizer)(
             self.model.parameters(), lr=self.config.learning_rate, **self.config.optimizer_args
         )
+        scheduler = CosineAnnealingLR(
+            optimizer,
+            T_max=self.config.epoch * len(self.train_dataset) // self.config.batch_size,
+            eta_min=self.config.learning_rate_min,
+        )
 
         for epoch in range(1, self.config.epoch + 1):
 
@@ -91,6 +97,7 @@ class TrainManager(BaseManager):
                 loss = self.model.criterion(output, batch.label)
                 loss.backward()
                 optimizer.step()
+                scheduler.step()
 
                 loss_sum += loss.item()
 
@@ -102,6 +109,7 @@ class TrainManager(BaseManager):
                     accuracy, precision, recall, f1 = self.get_metrics(true_labels, pred_labels)
                     self.logger.info(
                         f"{epoch:4} epoches {step_num + 1:6} / {total_step:-6} steps, "
+                        f"lr: {optimizer.param_groups[0]['lr']:5.3}, "
                         f"average loss: {loss_sum / (self.config.steps_per_log):8.5}, "
                         f"accuracy: {accuracy:7.4}, "
                         f"precision: {precision:7.4}, "

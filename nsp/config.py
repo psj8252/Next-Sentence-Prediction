@@ -15,6 +15,7 @@ class TrainConfig(NamedTuple):
     batch_size: batch size.
     val_batch_size: batch size for evaluating.
     learning_rate: learning rate for training.
+    learning_rate_min: minimum learning rate.
     optimizer: optimizer name which is in the torch.optim ex) "SGD" or "Adam", etc
     steps_per_log: step number for logging. At every that step number, log current status.
     steps_per_eval: step number for evaluating. At every that step number, evaluating and log result.
@@ -37,6 +38,7 @@ class TrainConfig(NamedTuple):
     batch_size: int
     val_batch_size: int
     learning_rate: float
+    learning_rate_min: float
     optimizer: str
     steps_per_log: int
     steps_per_eval: int

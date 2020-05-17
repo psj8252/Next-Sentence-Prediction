@@ -1,4 +1,5 @@
 import logging
+import os.path as path
 from datetime import datetime
 
 import torch
@@ -133,7 +134,12 @@ class TrainManager(BaseManager):
                         f"f1: {f1:7.4}"
                     )
 
-                    self.model.save(f"{self.config.model_save_prefix}_{epoch}epoch_{step_num + 1}steps_f1-{f1}.pth")
+                    self.model.save(
+                        path.join(
+                            self.config.model_save_dir,
+                            f"{self.config.model_save_prefix}_{epoch}epoch_{step_num + 1}steps_f1-{f1}.pth",
+                        )
+                    )
 
             # Evaluate
             eval_loss, accuracy, precision, recall, f1 = self._evaluate()
@@ -145,7 +151,12 @@ class TrainManager(BaseManager):
                 f"f1: {f1:7.4}"
             )
 
-            self.model.save(f"{self.config.model_save_prefix}_{epoch}epoch_f1-{f1}.pth")
+            self.model.save(
+                path.join(
+                    self.config.model_save_dir,
+                    f"{self.config.model_save_prefix}_{epoch}epoch_{step_num + 1}steps_f1-{f1}.pth",
+                )
+            )
 
     def _evaluate(self):
         """

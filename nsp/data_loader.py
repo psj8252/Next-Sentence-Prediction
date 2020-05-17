@@ -12,7 +12,7 @@ class Vocab(vocab.Vocab):
 
     UNK = "<UNK>"
 
-    def __init__(self, specials=["<CSOS>", "<QSOS>", "<RSOS>", "<CSEP>", "<EOS>"]):
+    def __init__(self, specials=["<SOS>", "<SEP>", "<EOS>"]):
         """
         :param specials: (iterable) Special tokens that considered as words.
         """

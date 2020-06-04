@@ -164,27 +164,28 @@ class TrainManager(BaseManager):
         """
         self.model.eval()
 
-        batches = Iterator(
-            self.test_dataset,
-            batch_size=self.config.val_batch_size,
-            device=self.device,
-            sort_key=lambda x: len(x.query),
-            train=False,
-        )
+        with torch.no_grad():
+            batches = Iterator(
+                self.test_dataset,
+                batch_size=self.config.val_batch_size,
+                device=self.device,
+                sort_key=lambda x: len(x.query),
+                train=False,
+            )
 
-        loss_sum = 0.0
-        true_labels = []
-        pred_labels = []
-        for batch in batches:
-            output = self.model(batch.context, batch.query, batch.reply)
+            loss_sum = 0.0
+            true_labels = []
+            pred_labels = []
+            for batch in batches:
+                output = self.model(batch.context, batch.query, batch.reply)
 
-            # Calculate loss
-            loss = self.model.criterion(output, batch.label)
-            loss_sum += loss.item() * len(batch)
+                # Calculate loss
+                loss = self.model.criterion(output, batch.label)
+                loss_sum += loss.item() * len(batch)
 
-            # Calculate metrics
-            true_labels.extend(batch.label.cpu().numpy())
-            pred_labels.extend(self.model.to_labels(output))
+                # Calculate metrics
+                true_labels.extend(batch.label.cpu().numpy())
+                pred_labels.extend(self.model.to_labels(output))
 
         accuracy, precision, recall, f1 = self.get_metrics(true_labels, pred_labels)
 

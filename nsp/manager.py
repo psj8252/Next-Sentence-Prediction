@@ -5,7 +5,6 @@ from datetime import datetime
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from sklearn.metrics import accuracy_score, precision_recall_fscore_support
 from torch.optim.lr_scheduler import CosineAnnealingLR
 from torchtext.data import Dataset, Example, Iterator
 
@@ -79,13 +78,14 @@ class TrainManager(BaseManager):
 
             # Shape
             # batch.context, batch.query, batch.reply: (Sequence x BatchSize)
-            # batch.label: (BatchSize)
             batches = Iterator(self.train_dataset, batch_size=self.config.batch_size, device=self.device, train=True)
 
             # Training
             loss_sum = 0.0
-            pred_labels = []
-            true_labels = []
+            TP = 0
+            FP = 0
+            TN = 0
+            FN = 0
             total_step = int(len(self.train_dataset) / self.config.batch_size + 1)
             for step_num, batch in enumerate(batches):
                 self.model.train()
@@ -95,43 +95,44 @@ class TrainManager(BaseManager):
                 # output: (BatchSize)
                 output = self.model(batch.context, batch.query, batch.reply)
 
-                loss = self.model.criterion(output, batch.label)
+                loss = self.model.criterion(output)
                 loss.backward()
                 optimizer.step()
                 scheduler.step()
 
                 loss_sum += loss.item()
 
-                pred_labels.extend(self.model.to_labels(output))
-                true_labels.extend(batch.label.cpu().numpy())
+                _TP, _FP, _TN, _FN = self.model.metrics_parts(output)
+                TP += _TP
+                FP += _FP
+                TN += _TN
+                FN += _FN
 
                 # logging step
                 if (step_num + 1) % self.config.steps_per_log == 0:
-                    accuracy, precision, recall, f1 = self.get_metrics(true_labels, pred_labels)
+                    accuracy, precision, recall, f1, neg_precision, neg_recall, neg_f1 = self.get_metrics(
+                        TP, FP, TN, FN
+                    )
                     self.logger.info(
                         f"{epoch:4} epoches {step_num + 1:6} / {total_step:-6} steps, "
                         f"lr: {optimizer.param_groups[0]['lr']:5.3}, "
                         f"average loss: {loss_sum / (self.config.steps_per_log):8.5}, "
-                        f"accuracy: {accuracy:7.4}, "
-                        f"precision: {precision:7.4}, "
-                        f"recall: {recall:7.4}, "
-                        f"f1: {f1:7.4}"
+                        + self.metrics_to_log(accuracy, precision, recall, f1, neg_precision, neg_recall, neg_f1)
                     )
                     loss_sum = 0.0
-                    pred_labels = []
-                    true_labels = []
+                    TP = 0
+                    FP = 0
+                    TN = 0
+                    FN = 0
 
                 # evaluation step
                 if (step_num + 1) % self.config.steps_per_eval == 0:
                     # Evaluate
-                    eval_loss, accuracy, precision, recall, f1 = self._evaluate()
+                    eval_loss, accuracy, precision, recall, f1, neg_precision, neg_recall, neg_f1 = self._evaluate()
                     self.logger.info(
                         f"{epoch:4} epoches {step_num + 1:6} / {total_step:-6} steps, "
-                        f"average evaluate loss: {eval_loss:6.3}, "
-                        f"accuracy: {accuracy:7.4}, "
-                        f"precision: {precision:7.4}, "
-                        f"recall: {recall:7.4}, "
-                        f"f1: {f1:7.4}"
+                        f"evlaute loss: {eval_loss:8.5}, "
+                        + self.metrics_to_log(accuracy, precision, recall, f1, neg_precision, neg_recall, neg_f1)
                     )
 
                     self.model.save(
@@ -142,13 +143,11 @@ class TrainManager(BaseManager):
                     )
 
             # Evaluate
-            eval_loss, accuracy, precision, recall, f1 = self._evaluate()
+            eval_loss, accuracy, precision, recall, f1, neg_precision, neg_recall, neg_f1 = self._evaluate()
             self.logger.info(
-                f"{epoch:4} epoches average evaluate loss: {eval_loss:6.3}, "
-                f"accuracy: {accuracy:7.4}, "
-                f"precision: {precision:7.4}, "
-                f"recall: {recall:7.4}, "
-                f"f1: {f1:7.4}"
+                f"{epoch:4} epoches {step_num + 1:6}, "
+                f"evaluate loss: {eval_loss:8.5}, "
+                + self.metrics_to_log(accuracy, precision, recall, f1, neg_precision, neg_recall, neg_f1)
             )
 
             self.model.save(
@@ -157,6 +156,19 @@ class TrainManager(BaseManager):
                     f"{self.config.model_save_prefix}_{epoch}epoch_{step_num + 1}steps_f1-{f1}.pth",
                 )
             )
+
+    def metrics_to_log(self, accuracy, precision, recall, f1, neg_precision, neg_recall, neg_f1):
+        logstring = (
+            f"Acc.: {accuracy:7.4}, "
+            f"Prec.: {precision:7.4}, "
+            f"Recl.: {recall:7.4}, "
+            f"F1: {f1:7.4}, "
+            f"NegPrec.: {neg_precision:7.4}, "
+            f"NegRecl.: {neg_recall:7.4}, "
+            f"NegF1: {neg_f1:7.4}"
+        )
+
+        return logstring
 
     def _evaluate(self):
         """
@@ -174,34 +186,46 @@ class TrainManager(BaseManager):
             )
 
             loss_sum = 0.0
-            true_labels = []
-            pred_labels = []
+            TP = 0
+            FP = 0
+            TN = 0
+            FN = 0
             for batch in batches:
                 output = self.model(batch.context, batch.query, batch.reply)
 
                 # Calculate loss
-                loss = self.model.criterion(output, batch.label)
+                loss = self.model.criterion(output)
                 loss_sum += loss.item() * len(batch)
 
                 # Calculate metrics
-                true_labels.extend(batch.label.cpu().numpy())
-                pred_labels.extend(self.model.to_labels(output))
+                _TP, _FP, _TN, _FN = self.model.metrics_parts(output)
+                TP += _TP
+                FP += _FP
+                TN += _TN
+                FN += _FN
 
-        accuracy, precision, recall, f1 = self.get_metrics(true_labels, pred_labels)
+        accuracy, precision, recall, f1, neg_precision, neg_recall, neg_f1 = self.get_metrics(TP, FP, TN, FN)
 
-        return loss_sum / len(self.test_dataset), accuracy, precision, recall, f1
+        return loss_sum / len(self.test_dataset), accuracy, precision, recall, f1, neg_precision, neg_recall, neg_f1
 
-    def get_metrics(self, true_labels, pred_labels):
-        """
-        :param true_labels: (iterable) correct label.
-        :param pred_labels: (iterable) predicted label by model.
-        :return: (accuracy, precision, recall, f1) (tuple of float)
-        """
-        accuracy = accuracy_score(true_labels, pred_labels)
-        precision, recall, f1, _ = precision_recall_fscore_support(
-            true_labels, pred_labels, average="binary", zero_division=0
-        )
-        return accuracy, precision, recall, f1
+    def get_metrics(self, TP, FP, TN, FN):
+        T = TP + TN
+        F = FP + FN
+        P = TP + FP
+        N = TN + FN
+        TOTAL = T + F
+
+        accuracy = T / TOTAL
+
+        precision = TP / P if P else 0.0
+        recall = TP / (TP + FN)
+        f1 = 2 * precision * recall / (precision + recall) if precision or recall else 0.0
+
+        neg_precision = TN / N if N else 0.0
+        neg_recall = TN / (TN + FP)
+        neg_f1 = 2 * neg_precision * neg_recall / (neg_precision + neg_recall) if neg_precision or neg_recall else 0.0
+
+        return (accuracy, precision, recall, f1, neg_precision, neg_recall, neg_f1)
 
 
 class InferManager(BaseManager):

@@ -58,7 +58,7 @@ class Vocab(vocab.Vocab):
 class Fields:
     def __init__(self, vocab_path=None, tokenize=None, preprocessing=None, **kwargs):
         """
-        object containing torchtext utterance and label fields.
+        object containing torchtext utterance fields.
         :param vocab_path: (str) vocab file path to create Vocab.
         :param tokenize: (func) function to tokenize utterances (str) -> (list) of tokens format.
                          default tokenizer is Mecab and str.split (if mecab is unavailable)
@@ -102,7 +102,7 @@ class DataLoader:
         """
         Make datasets from train_data_path, test_data_path.
         :param fields: (list, Fields) This is used for TabularDataset fields. If the type of fields is list, it's format should be TarbularDataset fields.
-                        [defulat file form] type tsv, contains header row, column format ('id', 'utterance', 'label')
+                        [defulat file form] type tsv, contains header row, column format ('id', 'context', 'query', 'reply')
         :param train_data_path: (str) training data file path.
         :param test_data_path: (str) testing data file path.
         :param format: (str) TabularDataset processing file format. (default: tsv)
@@ -118,7 +118,6 @@ class DataLoader:
                 ("context", fields.utterance_field),
                 ("query", fields.utterance_field),
                 ("reply", fields.utterance_field),
-                ("label", fields.label_field),
             ]
         else:
             assert "context" in (field_name for field_name, _ in fields)

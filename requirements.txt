@@ -3,4 +3,3 @@ torchtext
 konlpy
 dill
 pyyaml
-scikit-learn

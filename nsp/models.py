@@ -48,9 +48,6 @@ class TransformerModel(BaseModel):
         self.query_ffn = nn.Linear(d_model, embedding_dim)
         self.reply_ffn = nn.Linear(d_model, embedding_dim)
         self.context_query_mean_ffn = nn.Linear(d_model, embedding_dim)
-        self.cos = nn.CosineSimilarity(dim=1)
-
-        self.criterion = lambda outputs, labels: F.binary_cross_entropy(outputs, labels.float())
 
         # Set parameters for save
         self.save_params = {
@@ -72,7 +69,7 @@ class TransformerModel(BaseModel):
         [Shape]
         word_embed: (Sequence x BatchSize x d_model)
         encoded: (Sequence x BatchSize x d_model)
-        output: (BatchSize)
+        output: (ContextQuery-BatchSize, Reply-BatchSize)
         """
         # Word Embed
         context = self.word_embed(context_tokens)
@@ -90,12 +87,32 @@ class TransformerModel(BaseModel):
         reply = self.reply_ffn(reply.sum(dim=0))
         context_query = self.context_query_mean_ffn((context + query) / 2)
 
-        output = self.cos(context_query, reply)
-        output[output < 0] = 0.0
+        # Normalize
+        context_query = F.normalize(context_query, p=2, dim=1)
+        reply = F.normalize(reply, p=2, dim=1)
+
+        output = torch.matmul(context_query, reply.T)
         return output
 
     def to_labels(self, output):
         """
         Return to labels (ex [1, 0, 1, 1, 0, ...]) from model output
         """
-        return (output > 0.5).cpu().detach().numpy()
+        return (output.diagonal() > 0.5).cpu().detach().numpy()
+
+    def criterion(self, output):
+        positive_score = output.diagonal().sum()
+        negative_score = output.exp().sum(dim=1).log().sum()
+        score = positive_score - negative_score
+        return -score
+
+    def metrics_parts(self, output):
+        n_positive = output.shape[0]
+        answer = torch.zeros_like(output).fill_diagonal_(1)
+        is_correct = (output >= 0.5) == answer
+
+        TP = is_correct.diagonal().sum().cpu().detach().item()
+        TN = is_correct.sum().cpu().detach().item() - TP
+        FP = n_positive * n_positive - n_positive - TN
+        FN = n_positive - TP
+        return TP, FP, TN, FN

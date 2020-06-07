@@ -102,7 +102,7 @@ class TransformerModel(BaseModel):
 
     def criterion(self, output):
         positive_score = output.diagonal().sum()
-        negative_score = output.exp().sum(dim=1).log().sum()
+        negative_score = output.exp().fill_diagonal_(0).sum(dim=1).log().sum()
         score = positive_score - negative_score
         return -score
 

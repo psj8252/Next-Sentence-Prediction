@@ -101,8 +101,9 @@ class TransformerModel(BaseModel):
         return (output.diagonal() > 0.5).cpu().detach().numpy()
 
     def criterion(self, output):
+        mask_for_positive = 1 - torch.eye(*output.shape, device=output.device)
         positive_score = output.diagonal().sum()
-        negative_score = output.exp().fill_diagonal_(0).sum(dim=1).log().sum()
+        negative_score = (output.exp() * mask_for_positive).sum(dim=1).log().sum()
         score = positive_score - negative_score
         return -score
 

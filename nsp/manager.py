@@ -260,39 +260,53 @@ class InferManager(BaseManager):
         self.fields = Fields(vocab_path=self.config.vocab_path, tokenize=tokenize)
         self.logger.info(f"Set fields tokenize with '{self.fields.utterance_field.tokenize}'")
 
-    def inference_texts(self, texts):
+    def inference_texts(self, inputs):
         """
-        :param texts: (list) list of texts to inferece.
+        :param inputs: (list of tuple(context, query, reply)) list of (context, query, reply) to inferece.
         :return: (list) of (int) labels about each text.
         """
-        # Make inference batches
-        dataset = self._list_to_dataset(texts, self.fields.utterance_field)
-        batches = Iterator(
-            dataset, batch_size=self.config.val_batch_size, device=self.device, train=False, shuffle=False, sort=False
-        )
+        self.model.eval()
+        with torch.no_grad():
+            # Make inference batches
+            dataset = self._list_to_dataset(inputs, self.fields.utterance_field)
+            batches = Iterator(
+                dataset,
+                batch_size=self.config.val_batch_size,
+                device=self.device,
+                train=False,
+                shuffle=False,
+                sort=False,
+            )
 
-        # Predict
-        labels = []
-        total_step = int(len(dataset) / self.config.val_batch_size + 1)
-        for batch in batches:
-            output = self.model(batch.context, batch.query, batch.reply)
-            label = self.model.to_labels(output)
-            labels.extend(label)
+            # Predict
+            labels = []
+            total_step = int(len(dataset) / self.config.val_batch_size + 1)
+            for batch in batches:
+                output = self.model(batch.context, batch.query, batch.reply)
+                label = self.model.to_labels(output)
+                labels.extend(label)
 
         return labels
 
-    def _list_to_dataset(self, texts, utterance_field):
+    def _list_to_dataset(self, inputs, utterance_field):
         """
         Make dataset from list of texts.
-        :param texts: (list) list of texts to inferece.
+        :param inputs: (list of tuple(context, query, reply)) list of (context, query, reply) to inferece.
         :param utterance_field: (Field) fields having tokenize function and vocab.
         """
         # Tokenize texts
-        tokenized = [[utterance_field.tokenize(text)] for text in texts]
+        tokenized_inputs = [
+            [utterance_field.tokenize(context), utterance_field.tokenize(query), utterance_field.tokenize(reply)]
+            for context, query, reply in inputs
+        ]
 
         # Make dataset from list
-        fields = [("utterance", utterance_field)]
-        examples = [Example.fromlist(text, fields=fields) for text in tokenized]
+        fields = [
+            ("context", self.fields.utterance_field),
+            ("query", self.fields.utterance_field),
+            ("reply", self.fields.utterance_field),
+        ]
+        examples = [Example.fromlist(tokenized_input, fields=fields) for tokenized_input in tokenized_inputs]
         dataset = Dataset(examples, fields=fields)
 
         return dataset

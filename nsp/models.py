@@ -21,7 +21,7 @@ class BaseModel(nn.Module):
         :param path: (str) Path to load model from the file.
         :return: (torch.nn) Loaded model.
         """
-        checkpoint = torch.load(path)
+        checkpoint = torch.load(path, map_location="cpu")
         model = cls(**checkpoint["save_params"])
         model.load_state_dict(checkpoint["state_dict"])
         return model

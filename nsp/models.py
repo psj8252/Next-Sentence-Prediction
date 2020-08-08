@@ -103,8 +103,8 @@ class TransformerModel(BaseModel):
 
         # Normalize
         context = F.normalize(context, p=2, dim=1)
-        query = F.normalize(context, p=2, dim=1)
-        reply = F.normalize(context, p=2, dim=1)
+        query = F.normalize(query, p=2, dim=1)
+        reply = F.normalize(reply, p=2, dim=1)
         context_query = F.normalize(context_query, p=2, dim=1)
 
         # Calculate Cos Similarities

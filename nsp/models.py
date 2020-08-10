@@ -96,9 +96,9 @@ class TransformerModel(BaseModel):
         reply = self.transformer_encoder(reply)
 
         # Feed forward
-        context = self.context_ffn(context.sum(dim=0))
-        query = self.query_ffn(query.sum(dim=0))
-        reply = self.reply_ffn(reply.sum(dim=0))
+        context = self.context_ffn(context[0])
+        query = self.query_ffn(query[0])
+        reply = self.reply_ffn(reply[0])
         context_query = self.context_query_mean_ffn((context + query) / 2)
 
         # Normalize

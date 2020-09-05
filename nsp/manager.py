@@ -37,6 +37,9 @@ class TrainManager(BaseManager):
         :param training_config_path: (str) training config file path.
         :param device: (str, torch.device) device for training.
         """
+        # Load training Config
+        self.config = TrainConfig.load_from_json(training_config_path)
+
         # Make Output Directory
         self.checkpoint_dir = path.join(self.config.output_dir, "checkpoints")
         os.makedirs(self.checkpoint_dir, exist_ok=True)
@@ -45,13 +48,14 @@ class TrainManager(BaseManager):
         self._set_logger(path.join(self.config.output_dir, "train.log"))
         self.logger.info("Setting logger is complete")
 
+        # Log Configures
+        self.logger.info("===== Configures =====")
+        for param, value in self.config._asdict().items():
+            self.logger.info(f"{param:20} {value}")
+
         # Set device
         self.device = torch.device(device)
         self.logger.info(f"Setting device:{self.device} is complete")
-
-        # Load training Config
-        self.config = TrainConfig.load_from_json(training_config_path)
-        self.logger.info(f"Loaded training config from '{training_config_path}'")
 
         # Load Dataset
         self.data_loader = DataLoader.load(self.config.data_loader_path)

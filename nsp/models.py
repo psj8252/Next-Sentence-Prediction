@@ -128,7 +128,7 @@ class TransformerModel(BaseModel):
             positive_score = output.diagonal().sum()
             negative_score = (output.exp() * mask_for_positive).sum(dim=1).log().sum()
             loss -= positive_score - negative_score
-        return loss
+        return loss / len(outputs[0])
 
     def metrics_parts(self, outputs):
         n_positive = outputs[2].shape[0]

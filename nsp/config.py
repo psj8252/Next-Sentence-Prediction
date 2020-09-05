@@ -43,8 +43,7 @@ class TrainConfig(NamedTuple):
     steps_per_log: int
     steps_per_eval: int
 
-    model_save_dir: str
-    model_save_prefix: str
+    output_dir: str
 
     optimizer_args: dict = {}
 

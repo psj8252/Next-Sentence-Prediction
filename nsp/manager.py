@@ -1,4 +1,5 @@
 import logging
+import os
 import os.path as path
 from datetime import datetime
 
@@ -36,8 +37,12 @@ class TrainManager(BaseManager):
         :param training_config_path: (str) training config file path.
         :param device: (str, torch.device) device for training.
         """
+        # Make Output Directory
+        self.checkpoint_dir = path.join(self.config.output_dir, "checkpoints")
+        os.makedirs(self.checkpoint_dir, exist_ok=True)
+
         # Set loogger
-        self._set_logger(f"{datetime.now().strftime('%Y-%m-%d_%H:%M:%S')}_train.log")
+        self._set_logger(path.join(self.config.output_dir, "train.log"))
         self.logger.info("Setting logger is complete")
 
         # Set device
@@ -137,8 +142,8 @@ class TrainManager(BaseManager):
 
                     self.model.save(
                         path.join(
-                            self.config.model_save_dir,
-                            f"{self.config.model_save_prefix}_{epoch}epoch_{step_num + 1}steps_f1-{f1}.pth",
+                            self.checkpoint_dir,
+                            f"{self.model._get_name()}_{epoch}epoch_{step_num + 1}steps_f1-{f1:.4f}.pth",
                         )
                     )
 
@@ -152,8 +157,7 @@ class TrainManager(BaseManager):
 
             self.model.save(
                 path.join(
-                    self.config.model_save_dir,
-                    f"{self.config.model_save_prefix}_{epoch}epoch_{step_num + 1}steps_f1-{f1}.pth",
+                    self.checkpoint_dir, f"{self.model._get_name()}_{epoch}epoch_{step_num + 1}steps_f1-{f1:.4f}.pth",
                 )
             )
 

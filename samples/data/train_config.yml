@@ -21,8 +21,7 @@ optimizer: "SGD"
 steps_per_log: 1
 steps_per_eval: 1
 
-model_save_dir: "."
-model_save_prefix: "models"
+output_dir: "experiment"
 
 optimizer_args: 
   momentum: 0.9

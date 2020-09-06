@@ -9,9 +9,9 @@ import torch.optim as optim
 from torch.optim.lr_scheduler import CosineAnnealingLR
 from torchtext.data import Dataset, Example, Iterator
 
-from . import models
 from .config import InferConfig, TrainConfig
 from .data_loader import DataLoader, Fields, Vocab
+from .models import TransformerModel
 
 
 class BaseManager:
@@ -63,7 +63,7 @@ class TrainManager(BaseManager):
         self.logger.info("Loaded training, test datasets")
 
         # Create Model
-        self.model = getattr(models, self.config.model_type)(**self.config.model_configs)
+        self.model = TransformerModel(**self.config.model_configs)
         self.model.to(self.device)
         self.logger.info(f"Prepared model type: {type(self.model)}")
 
@@ -256,7 +256,7 @@ class InferManager(BaseManager):
         self.logger.info(f"Loaded inference config from '{inference_config_path}'")
 
         # Load Model
-        self.model = getattr(models, self.config.model_type).load(self.config.model_path)
+        self.model = TransformerModel.load(self.config.model_path)
         self.model.to(self.device)
         self.logger.info(f"Prepared model type: {type(self.model)}")
 
@@ -268,11 +268,15 @@ class InferManager(BaseManager):
         self.fields = Fields(vocab_path=self.config.vocab_path, tokenize=tokenize)
         self.logger.info(f"Set fields tokenize with '{self.fields.utterance_field.tokenize}'")
 
-    def inference_texts(self, inputs):
+    def inference_texts(self, inputs, threshold=None):
         """
         :param inputs: (list of tuple(context, query, reply)) list of (context, query, reply) to inferece.
+        :param threshold: (int) if prediction value greater or equal this value, it is considered as true.
         :return: (list) of (int) labels about each text.
         """
+        if threshold is None:
+            threshold = self.model.cossim_threshold
+
         self.model.eval()
         with torch.no_grad():
             # Make inference batches
@@ -287,14 +291,16 @@ class InferManager(BaseManager):
             )
 
             # Predict
+            preds = []
             labels = []
             total_step = int(len(dataset) / self.config.val_batch_size + 1)
             for batch in batches:
                 output = self.model(batch.context, batch.query, batch.reply)
                 label = self.model.to_labels(output)
+                preds.extend(output[-1].diagonal().cpu().numpy())
                 labels.extend(label)
 
-        return labels
+        return labels, preds
 
     def _list_to_dataset(self, inputs, utterance_field):
         """

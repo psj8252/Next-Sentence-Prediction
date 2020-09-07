@@ -3,6 +3,7 @@ import os
 import os.path as path
 from datetime import datetime
 
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -257,6 +258,7 @@ class InferManager(BaseManager):
 
         # Load Model
         self.model = TransformerModel.load(self.config.model_path)
+        self.model.eval()
         self.model.to(self.device)
         self.logger.info(f"Prepared model type: {type(self.model)}")
 
@@ -301,10 +303,73 @@ class InferManager(BaseManager):
 
         return labels, preds
 
+    def encode_texts(self, inputs, mode):
+        """
+        :param inputs: list of (context or query or reply) to infer.
+        :return: (numpy.Array) shaped ( NumInputs x EmbeddingDim )
+        """
+
+        if mode == "context":
+            inputs = [(input, "", "") for input in inputs]
+        elif mode == "query":
+            inputs = [("", input, "") for input in inputs]
+        elif mode == "reply":
+            inputs = [("", "", input) for input in inputs]
+        else:
+            raise RuntimeError("mode should be one of ('context', 'query', 'reply')")
+
+        self.model.eval()
+        with torch.no_grad():
+            # Make inference batches
+            dataset = self._list_to_dataset(inputs, self.fields.utterance_field)
+            batches = Iterator(
+                dataset,
+                batch_size=self.config.val_batch_size,
+                device=self.device,
+                train=False,
+                shuffle=False,
+                sort=False,
+            )
+
+            # Predict
+            embeddings = []
+            for batch in batches:
+                embedding = self.model.encode_tokens(getattr(batch, mode), mode).cpu().numpy()
+                embeddings.extend(embedding)
+        return np.array(embeddings)
+
+    def encode_context_query(self, inputs):
+        """
+        :param inputs: (list of tuple(context, query)) to inferece.
+        :return: (numpy.Array) shaped ( NumInputs x EmbeddingDim )
+        """
+
+        inputs = [(context, query, "") for context, query in inputs]
+
+        self.model.eval()
+        with torch.no_grad():
+            # Make inference batches
+            dataset = self._list_to_dataset(inputs, self.fields.utterance_field)
+            batches = Iterator(
+                dataset,
+                batch_size=self.config.val_batch_size,
+                device=self.device,
+                train=False,
+                shuffle=False,
+                sort=False,
+            )
+
+            # Predict
+            embeddings = []
+            for batch in batches:
+                embedding = self.model.encode_context_query(batch.context, batch.query).cpu().numpy()
+                embeddings.extend(embedding)
+        return np.array(embeddings)
+
     def _list_to_dataset(self, inputs, utterance_field):
         """
         Make dataset from list of texts.
-        :param inputs: (list of tuple(context, query, reply)) list of (context, query, reply) to inferece.
+        :param inputs: list of (context, query, reply) to inferece.
         :param utterance_field: (Field) fields having tokenize function and vocab.
         """
         # Tokenize texts

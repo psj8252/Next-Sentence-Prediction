@@ -293,7 +293,6 @@ class InferManager(BaseManager):
             # Predict
             preds = []
             labels = []
-            total_step = int(len(dataset) / self.config.val_batch_size + 1)
             for batch in batches:
                 output = self.model(batch.context, batch.query, batch.reply)
                 label = self.model.to_labels(output)

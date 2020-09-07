@@ -38,7 +38,7 @@ class TrainManager(BaseManager):
         :param device: (str, torch.device) device for training.
         """
         # Load training Config
-        self.config = TrainConfig.load_from_json(training_config_path)
+        self.config = TrainConfig.load_from_yaml(training_config_path)
 
         # Make Output Directory
         self.checkpoint_dir = path.join(self.config.output_dir, "checkpoints")
@@ -252,7 +252,7 @@ class InferManager(BaseManager):
         self.logger.info(f"Setting device:{self.device} is complete")
 
         # Load training Config
-        self.config = InferConfig.load_from_json(inference_config_path)
+        self.config = InferConfig.load_from_yaml(inference_config_path)
         self.logger.info(f"Loaded inference config from '{inference_config_path}'")
 
         # Load Model

@@ -48,7 +48,7 @@ class TrainConfig(NamedTuple):
     optimizer_args: dict = {}
 
     @classmethod
-    def load_from_json(cls, config_path, **kwargs):
+    def load_from_yaml(cls, config_path, **kwargs):
         """
         Load config from the config file.
         :param config_path: (str) yaml format config file.
@@ -75,8 +75,8 @@ class InferConfig(NamedTuple):
     val_batch_size: int
 
     @classmethod
-    def load_from_json(cls, config_path, **kwargs):
-        """
+    def load_from_yaml(cls, config_path, **kwargs):
+        """`
         Load config from the config file.
         :param config_path: (str) yaml format config file.
         :param **kwargs: parameters to override json setting.

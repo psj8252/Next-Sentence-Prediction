@@ -114,6 +114,36 @@ class TransformerModel(BaseModel):
 
         return context_score, query_score, context_query_score
 
+    def encode_tokens(self, input_tokens, mode):
+        """
+        :param input_tokens: (torch.tensor) input tokens. shaped (Sequence x BatchSize x VocabSize)
+        :param mode: (str) one of ('context', 'query', 'reply')
+        :return: (torch.tensor) model result shaped (BatchSize x d_model)
+        """
+        embedded = self.word_embed(input_tokens)
+        encoded = self.transformer_encoder(embedded)
+
+        if mode == "context":
+            result = self.context_ffn(encoded[0])
+        elif mode == "query":
+            result = self.query_ffn(encoded[0])
+        elif mode == "reply":
+            result = self.reply_ffn(encoded[0])
+        else:
+            raise RuntimeError(f"mode should be one of ('context', 'query', 'reply'), not {mode}")
+        return result
+
+    def encode_context_query(self, context_tokens, query_tokens):
+        """
+        :param context_tokens: (torch.tensor) context input tokens. shaped (Sequence x BatchSize x VocabSize)
+        :param query_tokens: (torch.tensor) query input tokens. shaped (Sequence x BatchSize x VocabSize)
+        :return: (torch.tensor) model result shaped (BatchSize x d_model)
+        """
+        context = self.encode_tokens(context_tokens, "context")
+        query = self.encode_tokens(query_tokens, "query")
+        context_query = self.context_query_mean_ffn((context + query) / 2)
+        return context_query
+
     def to_labels(self, outputs):
         """
         Return to labels (ex [1, 0, 1, 1, 0, ...]) from model context & query output

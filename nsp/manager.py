@@ -8,6 +8,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.optim.lr_scheduler import CosineAnnealingLR
+
 from torchtext.data import Dataset, Example, Iterator
 
 from .config import InferConfig, TrainConfig
@@ -49,9 +50,16 @@ class TrainManager(BaseManager):
         self._set_logger(path.join(self.config.output_dir, "train.log"))
         self.logger.info("Setting logger is complete")
 
+        # Log Model Parameters
+        self.logger.info("===========  Model Configures  ===========")
+        for param, value in self.config.model_configs.items():
+            self.logger.info(f"{param:20} {value}")
+
         # Log Configures
-        self.logger.info("===== Configures =====")
+        self.logger.info("==============  Configures  ==============")
         for param, value in self.config._asdict().items():
+            if param == "model_configs":
+                continue
             self.logger.info(f"{param:20} {value}")
 
         # Set device
@@ -72,7 +80,7 @@ class TrainManager(BaseManager):
         """
         Start training.
         """
-        self.logger.info("------------- Training Start -------------")
+        self.logger.info("=========  Training Start  =========")
 
         # Set optimizer
         optimizer = getattr(optim, self.config.optimizer)(
@@ -124,9 +132,9 @@ class TrainManager(BaseManager):
                         TP, FP, TN, FN
                     )
                     self.logger.info(
-                        f"{epoch:4} epoches {step_num + 1:6} / {total_step:-6} steps, "
-                        f"lr: {optimizer.param_groups[0]['lr']:5.3}, "
-                        f"average loss: {loss_sum / (self.config.steps_per_log):8.5}, "
+                        f"{epoch:2} epoches | {step_num + 1:6} / {total_step:-6} steps | "
+                        f"lr: {optimizer.param_groups[0]['lr']:5.3f} | "
+                        f"average loss: {loss_sum / (self.config.steps_per_log):7.4f} | "
                         + self.metrics_to_log(accuracy, precision, recall, f1, neg_precision, neg_recall, neg_f1)
                     )
                     loss_sum = 0.0
@@ -140,8 +148,8 @@ class TrainManager(BaseManager):
                     # Evaluate
                     eval_loss, accuracy, precision, recall, f1, neg_precision, neg_recall, neg_f1 = self._evaluate()
                     self.logger.info(
-                        f"{epoch:4} epoches {step_num + 1:6} / {total_step:-6} steps, "
-                        f"evlaute loss: {eval_loss:8.5}, "
+                        f"{epoch:2} epoches {step_num + 1:6} / {total_step:-6} steps | "
+                        f"evlaute loss: {eval_loss:7.4f} | "
                         + self.metrics_to_log(accuracy, precision, recall, f1, neg_precision, neg_recall, neg_f1)
                     )
 
@@ -155,8 +163,8 @@ class TrainManager(BaseManager):
             # Evaluate
             eval_loss, accuracy, precision, recall, f1, neg_precision, neg_recall, neg_f1 = self._evaluate()
             self.logger.info(
-                f"{epoch:4} epoches {step_num + 1:6}, "
-                f"evaluate loss: {eval_loss:8.5}, "
+                f"{epoch:2} epoches {step_num + 1:6} | "
+                f"evaluate loss: {eval_loss:8.4f} | "
                 + self.metrics_to_log(accuracy, precision, recall, f1, neg_precision, neg_recall, neg_f1)
             )
 
@@ -168,13 +176,13 @@ class TrainManager(BaseManager):
 
     def metrics_to_log(self, accuracy, precision, recall, f1, neg_precision, neg_recall, neg_f1):
         logstring = (
-            f"Acc.: {accuracy:7.4}, "
-            f"Prec.: {precision:7.4}, "
-            f"Recl.: {recall:7.4}, "
-            f"F1: {f1:7.4}, "
-            f"NegPrec.: {neg_precision:7.4}, "
-            f"NegRecl.: {neg_recall:7.4}, "
-            f"NegF1: {neg_f1:7.4}"
+            f"Acc.: {accuracy:7.4f} | "
+            f"Prec.: {precision:7.4f} | "
+            f"Recl.: {recall:7.4f} | "
+            f"F1: {f1:7.4f} | "
+            f"NegPrec.: {neg_precision:7.4f} | "
+            f"NegRecl.: {neg_recall:7.4f} | "
+            f"NegF1: {neg_f1:7.4f}"
         )
 
         return logstring
